@@ -1,0 +1,54 @@
+# K8S
+export PATH="$PATH:/Users/V9N/.istio-1.13.1/bin"
+
+config_list_context() {
+    kubectl config get-contexts
+}
+config_use_context() {
+    CONTEXT=$1
+    kubectl config use-context $CONTEXT
+}
+log_pod() {
+    echo "logging service: $1"
+    SERVICE=$1
+    kubectl -n $SERVICE logs -f $(kubectl -n $SERVICE get pods --selector=app=$SERVICE --output=jsonpath={.items..metadata.name})
+}
+list_pods() {
+    kubectl get pods --all-namespaces | awk '$1 ~ /NAMESPACE/ || $1 ~ /service/ {print $0}'
+}
+list_nss() {
+    kubectl get namespaces -A
+}
+apply() {
+    CONFIG=$1
+    kubectl apply -f $CONFIG
+}
+port_forward_db() {
+    kubectl port-forward  $(kubectl get pods --selector=app=haproxy --output=jsonpath={.items..metadata.name}) 5444:5432
+}
+build_and_run_jar() {
+	./gradlew clean spotlessApply build
+	echo "run jar with additional config: $@"
+    java -jar -Dspring.profiles.active=$1 ./build/libs/*.jar $@
+}
+port_forward_pod() {
+	echo "service: $1, local port: $2"
+    SERVICE=$1
+	kubectl port-forward --namespace $SERVICE $(kubectl get pod --namespace $SERVICE --selector=app=$SERVICE --output jsonpath='{.items..metadata.name}') $2:8080
+}
+monitor_pods() {
+	while true; do clear && printf '\e[3J' && list_all_namespace; sleep 60; done
+}
+port_forward_redis() {
+    echo "service: $1, local port: $2"
+    SERVICE=$1
+    kubectl port-forward --namespace $SERVICE redis-master-0 $2:6379
+}
+
+scale_pod() {
+    echo "scaling pod: $1 with replicas= $2"
+    SERVICE=$1
+    REPLICAS=$2
+    kubectl scale -n $1 deploy --replicas=$2 $1
+}
+
